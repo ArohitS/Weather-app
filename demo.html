@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CalPac - Smart Calorie Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #2d3748;
+            overflow-x: hidden;
+        }
+        
+        .app-container {
+            max-width: 420px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            min-height: 100vh;
+            box-shadow: 0 0 50px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .header .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+            font-weight: 300;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .ai-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 12px;
+            height: 12px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+        }
+        
+        .content {
+            padding: 0;
+            position: relative;
+        }
+        
+        .floating-nav {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            padding: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 4px;
+            z-index: 1000;
+            max-width: calc(100vw - 40px); /* Prevent overflow on small screens */
+        }
+        
+        .nav-item {
+            padding: 12px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 12px;
+            font-weight: 500;
+            color: #64748b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            min-width: 60px;
+        }
+        
+        .nav-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+        }
+        
+        .nav-icon {
+            font-size: 18px;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px;
+            padding-bottom: 100px; /* Add extra padding to prevent overlap */
+            min-height: calc(100vh - 200px);
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+        
+        .card-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1e293b;
+        }
+        
+        .ai-suggestion {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid #0ea5e9;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .ai-suggestion:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(14, 165, 233, 0.2);
+        }
+        
+        .ai-suggestion::before {
+            content: '🤖';
+            position: absolute;
+            top: -8px;
+            left: 16px;
+            background: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        
+        .ai-text {
+            font-size: 14px;
+            color: #0369a1;
+            font-weight: 500;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .btn-secondary:hover {
+            background: #e2e8f0;
+            transform: translateY(-1px);
+        }
+        
+        .btn-camera {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        .btn-camera:hover {
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+            font-weight: 500;
+        }
+        
+        .result-card {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border: 1px solid #22c55e;
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 16px;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .result-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #15803d;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px 0;
+        }
+        
+        .result-label {
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .result-value {
+            font-weight: 700;
+            color: #15803d;
+            font-size: 16px;
+        }
+        
+        .food-item {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .food-item:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+        
+        .food-name {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+        
+        .food-details {
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.4;
+        }
+        
+        .food-calories {
+            font-weight: 700;
+            color: #667eea;
+            font-size: 14px;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .smart-suggestions {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #f59e0b;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .suggestion-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 8px;
+        }
+        
+        .suggestion-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .suggestion-tag {
+            background: white;
+            color: #92400e;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #f59e0b;
+        }
+        
+        .suggestion-tag:hover {
+            background: #f59e0b;
+            color: white;
+            transform: scale(1.05);
+        }
+        
+        .welcome-card {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .welcome-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .welcome-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+        
+        .welcome-text {
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #64748b;
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        .empty-text {
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+        
+        /* Camera Styles */
+        .camera-container {
+            position: relative;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+        
+        .camera-preview {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            display: none;
+        }
+        
+        .camera-placeholder {
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .camera-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.7;
+        }
+        
+        .camera-text {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .camera-subtext {
+            font-size: 12px;
+            opacity: 0.6;
+        }
+        
+        .camera-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+        }
+        
+        .camera-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 25px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .capture-btn {
+            background: white;
+            color: #333;
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+        }
+        
+        .capture-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .gallery-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+        
+        .gallery-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .image-preview {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .detection-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            border-radius: 16px;
+        }
+        
+        .detection-text {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .detection-subtext {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .confidence-bar {
+            width: 200px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+        
+        @media (max-width: 480px) {
+            .app-container {
+                max-width: 100%;
+            }
+            
+            .floating-nav {
+                bottom: 10px;
+                left: 10px;
+                right: 10px;
+                transform: none;
+                max-width: none;
+            }
+            
+            .tab-content {
+                padding-bottom: 120px; /* Extra padding on mobile */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <div class="ai-indicator"></div>
+            <h1>CalPac</h1>
+            <div class="subtitle">Your intelligent nutrition companion</div>
+        </div>
+        
+        <div class="content">
+            <!-- Home Tab -->
+            <div id="home" class="tab-content active">
+                <div class="card">
+                    <div class="welcome-card">
+                        <div class="welcome-icon">🍎</div>
+                        <div class="welcome-title">Welcome to CalPac</div>
+                        <div class="welcome-text">Your smart nutrition tracker with AI-powered food recognition</div>
+                        <button class="btn" onclick="showTab('camera')">📷 Scan Food</button>
+                        <button class="btn btn-secondary" onclick="showTab('bmi')" style="margin-top: 8px;">Get Started</button>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">Today's Overview</div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="todayCalories">0</div>
+                            <div class="stat-label">Calories</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="todayLogs">0</div>
+                            <div class="stat-label">Food Items</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="calorieProgress" style="width: 0%"></div>
+                    </div>
+                    <div style="text-align: center; font-size: 12px; color: #64748b;">
+                        <span id="calorieStatus">Start logging to see progress</span>
+                    </div>
+                </div>
+                
+                <div class="ai-suggestion" onclick="showRandomTip()" style="cursor: pointer;">
+                    <div class="ai-text" id="randomTip">💡 CalPac Tip: Try scanning nuts like almonds or walnuts for instant calorie detection!</div>
+                </div>
+            </div>
+            
+            <!-- Camera Tab -->
+            <div id="camera" class="tab-content">
+                <div class="card">
+                    <div class="card-title">AI Food Scanner</div>
+                    <div class="ai-suggestion">
+                        <div class="ai-text">🤖 CalPac's AI can detect various food types with cloud API integration. Upload any food image for instant recognition!</div>
+                    </div>
+                    
+                    <div class="camera-container">
+                        <video id="cameraPreview" class="camera-preview" autoplay muted></video>
+                        <canvas id="captureCanvas" style="display: none;"></canvas>
+                        <div id="cameraPlaceholder" class="camera-placeholder">
+                            <div class="camera-icon">📷</div>
+                            <div class="camera-text">AI Food Scanner</div>
+                            <div class="camera-subtext">Tap to start scanning your food</div>
+                        </div>
+                        
+                        <div id="detectionOverlay" class="detection-overlay hidden">
+                            <div class="detection-text">🔍 Analyzing Food...</div>
+                            <div class="detection-subtext">AI is identifying your food</div>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" id="confidenceBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="camera-controls">
+                        <button class="camera-btn gallery-btn" onclick="selectFromGallery()" title="Gallery">
+                            📁
+                        </button>
+                        <button class="camera-btn capture-btn" onclick="capturePhoto()" title="Capture">
+                            📸
+                        </button>
+                        <button class="camera-btn gallery-btn" onclick="startCamera()" title="Camera">
+                            📷
+                        </button>
+                    </div>
+                    
+                    <div id="imagePreview" class="hidden">
+                        <img id="previewImage" class="image-preview" alt="Captured food">
+                        <button class="btn btn-camera" onclick="analyzeImage()">
+                            <span id="analyzeBtnText">🤖 Analyze with CalPac AI</span>
+                            <span id="analyzeLoading" class="loading hidden"></span>
+                        </button>
+                    </div>
+                    
+                    <div id="cameraResult" class="result-card hidden">
+                        <div class="result-title">
+                            <span>🎯</span>
+                            <span>AI Detection Results</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Detected Food</span>
+                            <span class="result-value" id="detectedFood">-</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Confidence</span>
+                            <span class="result-value" id="detectionConfidence">-</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Calories per 100g</span>
+                            <span class="result-value" id="detectedCalories">-</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Category</span>
+                            <span class="result-value" id="detectedCategory">-</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Detection Reason</span>
+                            <span class="result-value" id="detectionReason" style="font-size: 12px;">-</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Clarifai Concepts</span>
+                            <span class="result-value" id="clarifaiConcepts" style="font-size: 12px;">-</span>
+                        </div>
+                                <div class="result-row">
+                                    <span class="result-label">Debug Log</span>
+                                    <pre class="result-value" id="detectionDebug" style="font-size:11px; max-height:120px; overflow:auto; white-space:pre-wrap;">-</pre>
+                                </div>
+                        <button class="btn" onclick="addDetectedFood()" style="margin-top: 16px;">Add to Food Log</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- BMI Calculator Tab -->
+            <div id="bmi" class="tab-content">
+                <div class="card">
+                    <div class="card-title">Smart BMI Calculator</div>
+                    <div class="ai-suggestion">
+                        <div class="ai-text">🤖 CalPac will calculate your BMI and daily calorie needs based on your profile</div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Your Name</label>
+                        <input type="text" class="input-field" id="userName" placeholder="Enter your name">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Age</label>
+                        <input type="number" class="input-field" id="userAge" placeholder="25">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Gender</label>
+                        <select class="input-field" id="userGender">
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Height (cm)</label>
+                        <input type="number" class="input-field" id="userHeight" placeholder="170">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Weight (kg)</label>
+                        <input type="number" class="input-field" id="userWeight" placeholder="70">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Activity Level</label>
+                        <select class="input-field" id="userActivity">
+                            <option value="sedentary">Sedentary (desk job)</option>
+                            <option value="light">Light (1-3 days/week)</option>
+                            <option value="moderate" selected>Moderate (3-5 days/week)</option>
+                            <option value="active">Active (6-7 days/week)</option>
+                            <option value="very_active">Very Active (physical job)</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn" onclick="calculateBMI()">
+                        <span id="bmiBtnText">Calculate BMI & Calories</span>
+                        <span id="bmiLoading" class="loading hidden"></span>
+                    </button>
+                    
+                    <div id="bmiResult" class="result-card hidden">
+                        <div class="result-title">
+                            <span>📊</span>
+                            <span>Your Health Profile</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">BMI Score</span>
+                            <span class="result-value" id="bmiValue">-</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Health Category</span>
+                            <span class="result-value" id="bmiCategory">-</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Daily Calorie Goal</span>
+                            <span class="result-value" id="dailyCalories">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Food Logging Tab -->
+            <div id="log" class="tab-content">
+                <div class="card">
+                    <div class="card-title">AI Food Recognition</div>
+                    <div class="ai-suggestion">
+                        <div class="ai-text">🤖 CalPac recognizes 50+ foods including nuts, fruits, proteins, and vegetables</div>
+                    </div>
+                    
+                    <div class="smart-suggestions">
+                        <div class="suggestion-title">💡 Try these popular foods:</div>
+                        <div class="suggestion-tags">
+                            <span class="suggestion-tag" onclick="selectFood('almonds')">Almonds</span>
+                            <span class="suggestion-tag" onclick="selectFood('avocado')">Avocado</span>
+                            <span class="suggestion-tag" onclick="selectFood('chicken breast')">Chicken</span>
+                            <span class="suggestion-tag" onclick="selectFood('salmon')">Salmon</span>
+                            <span class="suggestion-tag" onclick="selectFood('quinoa')">Quinoa</span>
+                            <span class="suggestion-tag" onclick="selectFood('greek yogurt')">Greek Yogurt</span>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Food Name</label>
+                        <input type="text" class="input-field" id="foodName" placeholder="Type any food name...">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Quantity</label>
+                        <input type="number" class="input-field" id="foodQuantity" placeholder="100" value="100">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Unit</label>
+                        <select class="input-field" id="foodUnit">
+                            <option value="g">Grams (g)</option>
+                            <option value="kg">Kilograms (kg)</option>
+                            <option value="ml">Milliliters (ml)</option>
+                            <option value="cup">Cups</option>
+                            <option value="tbsp">Tablespoons</option>
+                            <option value="tsp">Teaspoons</option>
+                            <option value="piece">Pieces</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Meal Type</label>
+                        <select class="input-field" id="mealType">
+                            <option value="breakfast">🌅 Breakfast</option>
+                            <option value="lunch">☀️ Lunch</option>
+                            <option value="dinner">🌙 Dinner</option>
+                            <option value="snack">🍎 Snack</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn" onclick="estimateNutrients()">
+                        <span id="nutrientBtnText">Analyze with CalPac AI</span>
+                        <span id="nutrientLoading" class="loading hidden"></span>
+                    </button>
+                    
+                    <div id="nutrientResult" class="result-card hidden">
+                        <div class="result-title">
+                            <span>🧠</span>
+                            <span>AI Analysis Results</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Calories</span>
+                            <span class="result-value" id="caloriesValue">-</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Protein</span>
+                            <span class="result-value" id="proteinValue">-</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Carbohydrates</span>
+                            <span class="result-value" id="carbsValue">-</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Fat</span>
+                            <span class="result-value" id="fatValue">-</span>
+                        </div>
+                        <button class="btn" onclick="addToLog()" style="margin-top: 16px;">Add to Food Log</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- History Tab -->
+            <div id="history" class="tab-content">
+                <div class="card">
+                    <div class="card-title">Food History</div>
+                    <div id="foodHistory">
+                        <div class="empty-state">
+                            <div class="empty-icon">📊</div>
+                            <div class="empty-text">No food items logged yet</div>
+                            <div style="color: #94a3b8; font-size: 14px;">Start logging your meals to see your nutrition history!</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="floating-nav">
+            <div class="nav-item active" onclick="showTab('home')">
+                <div class="nav-icon">🏠</div>
+                <div>Home</div>
+            </div>
+            <div class="nav-item" onclick="showTab('camera')">
+                <div class="nav-icon">📷</div>
+                <div>Scan</div>
+            </div>
+            <div class="nav-item" onclick="showTab('log')">
+                <div class="nav-icon">✍️</div>
+                <div>Log</div>
+            </div>
+            <div class="nav-item" onclick="showTab('history')">
+                <div class="nav-icon">📈</div>
+                <div>History</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced AI Food Database with Image Recognition
+        const aiFoodDatabase = {
+            // Nuts & Seeds (High-calorie density)
+            'almond': { calories: 579, protein: 21, carbs: 22, fat: 50, category: 'nut', keywords: ['almond', 'nuts', 'tree nut'] },
+            'almonds': { calories: 579, protein: 21, carbs: 22, fat: 50, category: 'nut', keywords: ['almond', 'nuts', 'tree nut'] },
+            'walnut': { calories: 654, protein: 15, carbs: 14, fat: 65, category: 'nut', keywords: ['walnut', 'nuts', 'tree nut'] },
+            'walnuts': { calories: 654, protein: 15, carbs: 14, fat: 65, category: 'nut', keywords: ['walnut', 'nuts', 'tree nut'] },
+            'cashew': { calories: 553, protein: 18, carbs: 30, fat: 44, category: 'nut', keywords: ['cashew', 'nuts', 'tree nut'] },
+            'cashews': { calories: 553, protein: 18, carbs: 30, fat: 44, category: 'nut', keywords: ['cashew', 'nuts', 'tree nut'] },
+            'peanut': { calories: 567, protein: 26, carbs: 16, fat: 49, category: 'nut', keywords: ['peanut', 'nuts', 'legume'] },
+            'peanuts': { calories: 567, protein: 26, carbs: 16, fat: 49, category: 'nut', keywords: ['peanut', 'nuts', 'legume'] },
+            'pistachio': { calories: 560, protein: 20, carbs: 28, fat: 45, category: 'nut', keywords: ['pistachio', 'nuts', 'tree nut'] },
+            'pistachios': { calories: 560, protein: 20, carbs: 28, fat: 45, category: 'nut', keywords: ['pistachio', 'nuts', 'tree nut'] },
+            'sunflower seed': { calories: 584, protein: 21, carbs: 20, fat: 51, category: 'seed', keywords: ['sunflower', 'seed', 'seeds'] },
+            'sunflower seeds': { calories: 584, protein: 21, carbs: 20, fat: 51, category: 'seed', keywords: ['sunflower', 'seed', 'seeds'] },
+            'chia seed': { calories: 486, protein: 17, carbs: 42, fat: 31, category: 'seed', keywords: ['chia', 'seed', 'seeds'] },
+            'chia seeds': { calories: 486, protein: 17, carbs: 42, fat: 31, category: 'seed', keywords: ['chia', 'seed', 'seeds'] },
+            
+            // Fruits
+            'apple': { calories: 52, protein: 0.3, carbs: 14, fat: 0.2, category: 'fruit', keywords: ['apple', 'fruit', 'red', 'green'] },
+            'banana': { calories: 89, protein: 1.1, carbs: 23, fat: 0.3, category: 'fruit', keywords: ['banana', 'fruit', 'yellow'] },
+            'orange': { calories: 47, protein: 0.9, carbs: 12, fat: 0.1, category: 'fruit', keywords: ['orange', 'fruit', 'citrus'] },
+            'avocado': { calories: 160, protein: 2, carbs: 9, fat: 15, category: 'fruit', keywords: ['avocado', 'fruit', 'green', 'healthy fat'] },
+            'strawberry': { calories: 32, protein: 0.7, carbs: 8, fat: 0.3, category: 'fruit', keywords: ['strawberry', 'fruit', 'red', 'berry'] },
+            'strawberries': { calories: 32, protein: 0.7, carbs: 8, fat: 0.3, category: 'fruit', keywords: ['strawberry', 'fruit', 'red', 'berry'] },
+            'blueberry': { calories: 57, protein: 0.7, carbs: 14, fat: 0.3, category: 'fruit', keywords: ['blueberry', 'fruit', 'blue', 'berry'] },
+            'blueberries': { calories: 57, protein: 0.7, carbs: 14, fat: 0.3, category: 'fruit', keywords: ['blueberry', 'fruit', 'blue', 'berry'] },
+            'mango': { calories: 60, protein: 0.8, carbs: 15, fat: 0.4, category: 'fruit', keywords: ['mango', 'fruit', 'tropical', 'orange'] },
+            'pineapple': { calories: 50, protein: 0.5, carbs: 13, fat: 0.1, category: 'fruit', keywords: ['pineapple', 'fruit', 'tropical', 'yellow'] },
+            
+            // Proteins
+            'chicken': { calories: 165, protein: 31, carbs: 0, fat: 3.6, category: 'protein', keywords: ['chicken', 'meat', 'poultry', 'white meat'] },
+            'chicken breast': { calories: 165, protein: 31, carbs: 0, fat: 3.6, category: 'protein', keywords: ['chicken', 'breast', 'meat', 'poultry'] },
+            'salmon': { calories: 208, protein: 25, carbs: 0, fat: 12, category: 'protein', keywords: ['salmon', 'fish', 'seafood', 'pink'] },
+            'fish': { calories: 206, protein: 22, carbs: 0, fat: 12, category: 'protein', keywords: ['fish', 'seafood', 'protein'] },
+            'egg': { calories: 155, protein: 13, carbs: 1.1, fat: 11, category: 'protein', keywords: ['egg', 'eggs', 'protein', 'white', 'yolk'] },
+            'eggs': { calories: 155, protein: 13, carbs: 1.1, fat: 11, category: 'protein', keywords: ['egg', 'eggs', 'protein', 'white', 'yolk'] },
+            'tofu': { calories: 76, protein: 8, carbs: 1.9, fat: 4.8, category: 'protein', keywords: ['tofu', 'soy', 'protein', 'white'] },
+            'beef': { calories: 250, protein: 26, carbs: 0, fat: 17, category: 'protein', keywords: ['beef', 'meat', 'red meat', 'protein'] },
+            'pork': { calories: 242, protein: 27, carbs: 0, fat: 14, category: 'protein', keywords: ['pork', 'meat', 'protein'] },
+            
+            // Vegetables
+            'broccoli': { calories: 34, protein: 2.8, carbs: 7, fat: 0.4, category: 'vegetable', keywords: ['broccoli', 'vegetable', 'green', 'cruciferous'] },
+            'carrot': { calories: 41, protein: 0.9, carbs: 10, fat: 0.2, category: 'vegetable', keywords: ['carrot', 'vegetable', 'orange', 'root'] },
+            'spinach': { calories: 23, protein: 2.9, carbs: 3.6, fat: 0.4, category: 'vegetable', keywords: ['spinach', 'vegetable', 'green', 'leafy'] },
+            'tomato': { calories: 18, protein: 0.9, carbs: 3.9, fat: 0.2, category: 'vegetable', keywords: ['tomato', 'vegetable', 'red', 'fruit'] },
+            'bell pepper': { calories: 31, protein: 1, carbs: 7, fat: 0.3, category: 'vegetable', keywords: ['bell pepper', 'pepper', 'vegetable', 'colorful'] },
+            'cucumber': { calories: 16, protein: 0.7, carbs: 4, fat: 0.1, category: 'vegetable', keywords: ['cucumber', 'vegetable', 'green', 'fresh'] },
+            'onion': { calories: 40, protein: 1.1, carbs: 9, fat: 0.1, category: 'vegetable', keywords: ['onion', 'vegetable', 'white', 'yellow'] },
+            'potato': { calories: 77, protein: 2, carbs: 17, fat: 0.1, category: 'vegetable', keywords: ['potato', 'vegetable', 'starchy', 'brown'] },
+            'sweet potato': { calories: 86, protein: 1.6, carbs: 20, fat: 0.1, category: 'vegetable', keywords: ['sweet potato', 'vegetable', 'orange', 'starchy'] },
+            
+            // Grains & Carbs
+            'rice': { calories: 130, protein: 2.7, carbs: 28, fat: 0.3, category: 'grain', keywords: ['rice', 'grain', 'white', 'brown'] },
+            'brown rice': { calories: 111, protein: 2.6, carbs: 23, fat: 0.9, category: 'grain', keywords: ['brown rice', 'rice', 'grain', 'brown'] },
+            'quinoa': { calories: 120, protein: 4.4, carbs: 22, fat: 1.9, category: 'grain', keywords: ['quinoa', 'grain', 'superfood', 'small'] },
+            'oats': { calories: 68, protein: 2.4, carbs: 12, fat: 1.4, category: 'grain', keywords: ['oats', 'oatmeal', 'grain', 'breakfast'] },
+            'oatmeal': { calories: 68, protein: 2.4, carbs: 12, fat: 1.4, category: 'grain', keywords: ['oatmeal', 'oats', 'grain', 'breakfast'] },
+            'bread': { calories: 247, protein: 13, carbs: 41, fat: 4.2, category: 'grain', keywords: ['bread', 'grain', 'baked', 'slice'] },
+            'pasta': { calories: 131, protein: 5, carbs: 25, fat: 1.2, category: 'grain', keywords: ['pasta', 'noodles', 'grain', 'italian'] },
+            
+            // Dairy
+            'milk': { calories: 42, protein: 3.4, carbs: 5, fat: 1, category: 'dairy', keywords: ['milk', 'dairy', 'white', 'liquid'] },
+            'yogurt': { calories: 59, protein: 10, carbs: 3.6, fat: 0.4, category: 'dairy', keywords: ['yogurt', 'dairy', 'white', 'creamy'] },
+            'greek yogurt': { calories: 59, protein: 10, carbs: 3.6, fat: 0.4, category: 'dairy', keywords: ['greek yogurt', 'yogurt', 'dairy', 'thick'] },
+            'cheese': { calories: 113, protein: 7, carbs: 1, fat: 9, category: 'dairy', keywords: ['cheese', 'dairy', 'yellow', 'white'] },
+            'cheddar cheese': { calories: 113, protein: 7, carbs: 1, fat: 9, category: 'dairy', keywords: ['cheddar cheese', 'cheese', 'dairy', 'yellow'] },
+        };
+
+        let foodLog = [];
+        let userProfile = null;
+        let currentStream = null;
+        let capturedImageData = null;
+
+        function showTab(tabName) {
+            console.log('Switching to tab:', tabName);
+            
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Show selected tab
+            const targetTab = document.getElementById(tabName);
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+            
+            // Find and activate the corresponding nav item
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                if (item.onclick && item.onclick.toString().includes(tabName)) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // Stop camera when leaving camera tab
+            if (tabName !== 'camera') {
+                stopCamera();
+            }
+            
+            // Show random tip when switching to home tab
+            if (tabName === 'home') {
+                showRandomTip();
+            }
+        }
+
+        function selectFood(foodName) {
+            document.getElementById('foodName').value = foodName;
+            estimateNutrients();
+        }
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment', // Use back camera
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                
+                const video = document.getElementById('cameraPreview');
+                video.srcObject = stream;
+                video.style.display = 'block';
+                document.getElementById('cameraPlaceholder').style.display = 'none';
+                currentStream = stream;
+                
+                showAIMessage('📷 CalPac camera started! Point at your food and tap capture.');
+            } catch (error) {
+                console.error('Camera error:', error);
+                showAIMessage('❌ Camera access denied. Please allow camera permissions.');
+            }
+        }
+
+        function stopCamera() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+            document.getElementById('cameraPreview').style.display = 'none';
+            document.getElementById('cameraPlaceholder').style.display = 'flex';
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('cameraPreview');
+            const canvas = document.getElementById('captureCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+            
+            capturedImageData = canvas.toDataURL('image/jpeg');
+            
+            // Show preview
+            document.getElementById('previewImage').src = capturedImageData;
+            document.getElementById('imagePreview').classList.remove('hidden');
+            
+            showAIMessage('📸 Photo captured! Tap "Analyze with CalPac AI" to detect the food.');
+        }
+
+        function selectFromGallery() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        capturedImageData = e.target.result;
+                        document.getElementById('previewImage').src = capturedImageData;
+                        document.getElementById('imagePreview').classList.remove('hidden');
+                        showAIMessage('📁 Image selected! Tap "Analyze with CalPac AI" to detect the food.');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            input.click();
+        }
+
+        function analyzeImage() {
+            if (!capturedImageData) {
+                showAIMessage('❌ Please capture or select an image first.');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('analyzeBtnText').classList.add('hidden');
+            document.getElementById('analyzeLoading').classList.remove('hidden');
+            document.getElementById('detectionOverlay').classList.remove('hidden');
+
+            // Simulate AI analysis with realistic timing
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 90) progress = 90;
+                document.getElementById('confidenceBar').style.width = progress + '%';
+            }, 200);
+
+            setTimeout(async () => {
+                // Complete progress bar
+                document.getElementById('confidenceBar').style.width = '100%';
+                
+                try {
+                    // Use async food detection
+                    const detectedFood = await simulateImageRecognition();
+                    
+                    setTimeout(() => {
+                        // Hide loading
+                        document.getElementById('analyzeBtnText').classList.remove('hidden');
+                        document.getElementById('analyzeLoading').classList.add('hidden');
+                        document.getElementById('detectionOverlay').classList.add('hidden');
+                        
+                        // Show results
+                        document.getElementById('detectedFood').textContent = detectedFood.name;
+                        document.getElementById('detectionConfidence').textContent = Math.round(detectedFood.confidence * 100) + '%';
+                        document.getElementById('detectedCalories').textContent = detectedFood.calories + ' kcal';
+                        document.getElementById('detectedCategory').textContent = detectedFood.category;
+                        document.getElementById('detectionReason').textContent = detectedFood.reason || 'Visual analysis completed';
+                        document.getElementById('cameraResult').classList.remove('hidden');
+                        
+                        const source = detectedFood.source || 'Local AI';
+                        showAIMessage(`🎯 ${source} detected "${detectedFood.name}" with ${Math.round(detectedFood.confidence * 100)}% confidence!`);
+                    }, 500);
+                } catch (error) {
+                    console.error('Food detection error:', error);
+                    // Fallback to local analysis
+                    const detectedFood = analyzeImageCharacteristics(document.getElementById('previewImage'));
+                    
+                    setTimeout(() => {
+                        // Hide loading
+                        document.getElementById('analyzeBtnText').classList.remove('hidden');
+                        document.getElementById('analyzeLoading').classList.add('hidden');
+                        document.getElementById('detectionOverlay').classList.add('hidden');
+                        
+                        // Show results
+                        document.getElementById('detectedFood').textContent = detectedFood.name;
+                        document.getElementById('detectionConfidence').textContent = Math.round(detectedFood.confidence * 100) + '%';
+                        document.getElementById('detectedCalories').textContent = detectedFood.calories + ' kcal';
+                        document.getElementById('detectedCategory').textContent = detectedFood.category;
+                        document.getElementById('detectionReason').textContent = detectedFood.reason || 'Local analysis completed';
+                        document.getElementById('cameraResult').classList.remove('hidden');
+                        
+                        showAIMessage(`🎯 Local AI detected "${detectedFood.name}" with ${Math.round(detectedFood.confidence * 100)}% confidence!`);
+                    }, 500);
+                }
+                
+                clearInterval(progressInterval);
+            }, 3000);
+        }
+
+        // Food recognition: simplified, robust implementation
+        const CLARIFAI_API_KEY = '980c07b742cd4c748721913e911b8b45';
+        const CLARIFAI_FOOD_MODEL = 'bd367be194cf45149e75f01d59f77ba7';
+        const RECOGNITION_TIMEOUT = 15000; // ms
+
+        const state = { isProcessing: false, lastProcessedImage: null };
+
+        // Simple food info for common items (fallback)
+        const SIMPLE_FOOD_INFO = {
+            egg: { name: 'Eggs', calories: 155, protein: 13, carbs: 1.1, fat: 11, category: 'Protein' }
+        };
+
+        // Decision logging for debugging (console + on-screen)
+        const decisionLog = [];
+        function pushDecision(msg) {
+            try {
+                const t = `[${new Date().toLocaleTimeString()}] ${msg}`;
+                decisionLog.push(t);
+                // keep last 20 entries
+                if (decisionLog.length > 200) decisionLog.shift();
+                const el = document.getElementById('detectionDebug');
+                if (el) el.textContent = decisionLog.slice(-20).join('\n');
+                console.log('Decision:', t);
+            } catch (e) {
+                console.log('Decision (fallback):', msg);
+            }
+        }
+
+        // Public entry: simulate image recognition with Clarifai fallback -> local
+        async function simulateImageRecognition() {
+            if (state.isProcessing) return { name: 'Processing', confidence: 0 };
+            if (!capturedImageData) return { name: 'No Image', confidence: 0 };
+
+            state.isProcessing = true;
+            state.lastProcessedImage = capturedImageData;
+
+            try {
+                // Try Clarifai with timeout
+                if (CLARIFAI_API_KEY && CLARIFAI_API_KEY !== 'YOUR_CLARIFAI_API_KEY') {
+                    try {
+                        const clarifaiPromise = recognizeFoodWithClarifai(capturedImageData);
+                        const timeout = new Promise(resolve => setTimeout(() => resolve(null), RECOGNITION_TIMEOUT));
+                        const result = await Promise.race([clarifaiPromise, timeout]);
+                        if (result) return result;
+                    } catch (e) {
+                        console.warn('Clarifai call failed:', e);
+                    }
+                }
+
+                // Local analysis fallback
+                const img = document.getElementById('previewImage');
+                const analysis = analyzeImageCharacteristics(img);
+                return analysis;
+            } finally {
+                state.isProcessing = false;
+            }
+        }
+
+        // Call Clarifai API and map result to our food info
+        async function recognizeFoodWithClarifai(imageData) {
+            try {
+                const base64Data = imageData.split(',')[1];
+                const res = await fetch(`https://api.clarifai.com/v2/models/${CLARIFAI_FOOD_MODEL}/outputs`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Key ${CLARIFAI_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ inputs: [{ data: { image: { base64: base64Data } } }] })
+                });
+
+                if (!res.ok) throw new Error('Clarifai request failed');
+                const data = await res.json();
+                const concepts = (data.outputs && data.outputs[0] && data.outputs[0].data && data.outputs[0].data.concepts) || [];
+
+                // Log full Clarifai response for debugging
+                try { console.log('Clarifai response:', data); } catch (e) {}
+
+                // Show top concepts in the UI (if element exists)
+                try {
+                    const el = document.getElementById('clarifaiConcepts');
+                    if (el) el.textContent = concepts.slice(0,5).map(c => `${c.name} (${Math.round((c.value||0)*100)}%)`).join(', ') || '-';
+                } catch (e) {}
+
+                // prefer any egg-related detection first
+                for (const c of concepts) {
+                    const name = (c.name || '').toLowerCase();
+                    if (name.includes('egg') || name.includes('yolk') || name.includes('omelet') || name.includes('omelette')) {
+                        return { ...SIMPLE_FOOD_INFO.egg, confidence: c.value || 0.6, reason: `Clarifai detected ${c.name}` , source: 'Clarifai'};
+                    }
+                }
+
+                // otherwise take the top concept if reasonably confident
+                if (concepts.length > 0 && (concepts[0].value || 0) > 0.45) {
+                    const top = concepts[0];
+                    // try to map to aiFoodDatabase by exact key
+                    const mapped = mapClarifaiLabelToFood((top.name||'').toLowerCase());
+                    if (mapped) return { ...mapped, confidence: top.value || 0.5, reason: `Clarifai detected ${top.name}`, source: 'Clarifai' };
+                    return { name: top.name, calories: 150, confidence: top.value || 0.5, category: 'Unknown', reason: `Clarifai detected ${top.name}`, source: 'Clarifai' };
+                }
+
+                return null;
+            } catch (err) {
+                console.warn('recognizeFoodWithClarifai error', err);
+                return null;
+            }
+        }
+
+        // Map Clarifai label (string) to aiFoodDatabase entry where possible
+        function mapClarifaiLabelToFood(label) {
+            if (!label) return null;
+            const key = label.toLowerCase().trim();
+
+            // direct lookup
+            if (aiFoodDatabase[key]) return { name: capitalize(aiFoodDatabase[key].keywords ? aiFoodDatabase[key].keywords[0] : key), calories: aiFoodDatabase[key].calories, protein: aiFoodDatabase[key].protein, carbs: aiFoodDatabase[key].carbs, fat: aiFoodDatabase[key].fat, category: aiFoodDatabase[key].category };
+
+            // try keyword matching
+            for (const [k, v] of Object.entries(aiFoodDatabase)) {
+                if (k.includes(key) || key.includes(k)) return { name: capitalize(k), calories: v.calories, protein: v.protein, carbs: v.carbs, fat: v.fat, category: v.category };
+                if (v.keywords && v.keywords.some(kw => key.includes(kw) || kw.includes(key))) return { name: capitalize(k), calories: v.calories, protein: v.protein, carbs: v.carbs, fat: v.fat, category: v.category };
+            }
+
+            return null;
+        }
+
+        function capitalize(s) { return s && s.length ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+        function analyzeImageCharacteristics(image) {
+            // Create a canvas to analyze the image
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = image.naturalWidth || image.width;
+            canvas.height = image.naturalHeight || image.height;
+            
+            ctx.drawImage(image, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // Analyze colors and patterns
+            const colorAnalysis = analyzeColors(data);
+            const shapeAnalysis = analyzeShape(canvas.width, canvas.height);
+            
+            // Determine food based on analysis
+            return determineFoodFromAnalysis(colorAnalysis, shapeAnalysis);
+        }
+
+        function analyzeColors(data) {
+            let totalR = 0, totalG = 0, totalB = 0;
+            let pixelCount = 0;
+            let dominantColors = {};
+            let yolkCount = 0;
+
+            // Sample every 10th pixel for performance (RGBA -> step 40)
+            for (let i = 0; i < data.length; i += 40) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+
+                totalR += r;
+                totalG += g;
+                totalB += b;
+                pixelCount++;
+
+                // Track dominant colors (coarse bins)
+                const colorKey = `${Math.floor(r/50)*50},${Math.floor(g/50)*50},${Math.floor(b/50)*50}`;
+                dominantColors[colorKey] = (dominantColors[colorKey] || 0) + 1;
+
+                // Simple yolk-color heuristic: warm yellow/orange pixels
+                // tuned to capture yolk: relatively high red, medium-high green, lower blue
+                if (r >= 170 && g >= 110 && b <= 140 && (r - g) >= 20) {
+                    yolkCount++;
+                }
+            }
+
+            const avgR = totalR / pixelCount;
+            const avgG = totalG / pixelCount;
+            const avgB = totalB / pixelCount;
+            const yolkScore = yolkCount / Math.max(1, pixelCount);
+
+            return {
+                averageColor: { r: avgR, g: avgG, b: avgB },
+                dominantColors: dominantColors,
+                brightness: (avgR + avgG + avgB) / 3,
+                colorVariance: calculateColorVariance(data, avgR, avgG, avgB),
+                yolkScore: yolkScore
+            };
+        }
+
+        function analyzeShape(width, height) {
+            const aspectRatio = width / height;
+            const area = width * height;
+            
+            return {
+                aspectRatio: aspectRatio,
+                area: area,
+                isSquare: Math.abs(aspectRatio - 1) < 0.2,
+                isWide: aspectRatio > 1.5,
+                isTall: aspectRatio < 0.7
+            };
+        }
+
+        function calculateColorVariance(data, avgR, avgG, avgB) {
+            let variance = 0;
+            let count = 0;
+            
+            for (let i = 0; i < data.length; i += 40) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                
+                variance += Math.pow(r - avgR, 2) + Math.pow(g - avgG, 2) + Math.pow(b - avgB, 2);
+                count++;
+            }
+            
+            return variance / count;
+        }
+
+        function determineFoodFromAnalysis(colorAnalysis, shapeAnalysis) {
+            const { averageColor, brightness, colorVariance, dominantColors, yolkScore } = colorAnalysis;
+            const { aspectRatio, isSquare, isWide, isTall } = shapeAnalysis;
+
+            // Enhanced food detection with better accuracy
+            const foods = [];
+
+            // Boiled Egg detection - relaxed thresholds so real photos are captured
+            if (averageColor.r > 200 && averageColor.g > 180 && averageColor.b > 160 && 
+                brightness > 180 && colorVariance < 2000 && 
+                (isSquare || (aspectRatio > 0.6 && aspectRatio < 1.5))) {
+                foods.push({ name: 'Boiled Eggs', confidence: 0.90, calories: 155, category: 'Protein', reason: 'Pale/white colors and rounded/oval shape (relaxed thresholds)' });
+            }
+
+            // Raw Egg detection - slightly more yellow tint, oval shape (relaxed)
+            if (averageColor.r > 190 && averageColor.g > 170 && averageColor.b > 150 && 
+                brightness > 170 && brightness < 230 && colorVariance < 2500 &&
+                (aspectRatio > 0.6 && aspectRatio < 1.4)) {
+                foods.push({ name: 'Raw Eggs', confidence: 0.88, calories: 155, category: 'Protein', reason: 'Cream/yellow tint and oval shape (relaxed)' });
+            }
+
+            // Fried Egg detection - white center with brown edges, higher variance (relaxed)
+            if (averageColor.r > 180 && averageColor.g > 160 && averageColor.b > 140 && 
+                brightness > 160 && colorVariance > 1000 && colorVariance < 4000 &&
+                (aspectRatio > 0.7 && aspectRatio < 1.3)) {
+                foods.push({ name: 'Fried Eggs', confidence: 0.86, calories: 155, category: 'Protein', reason: 'White center with darker edges, fried appearance (relaxed)' });
+            }
+
+            // Scrambled Eggs detection - yellow/white mixed, irregular texture (relaxed)
+            if (averageColor.r > 200 && averageColor.g > 170 && averageColor.b > 130 && 
+                brightness > 160 && colorVariance > 1000 && colorVariance < 5000) {
+                foods.push({ name: 'Scrambled Eggs', confidence: 0.84, calories: 155, category: 'Protein', reason: 'Yellow/white mixed color, scrambled texture (relaxed)' });
+            }
+
+            // Generic egg fallback: if image is pale/cream and low-to-moderate variance, mark as eggs (helps real photos)
+            if (brightness > 160 && averageColor.r > 180 && averageColor.g > 160 && averageColor.b > 140 && colorVariance < 3500) {
+                foods.push({ name: 'Eggs', confidence: 0.75, calories: 155, category: 'Protein', reason: 'Pale/cream colors detected — likely egg (fallback)' });
+            }
+
+            // Avocado detection - darker green, more saturated, oval shape
+            if (averageColor.r > 60 && averageColor.r < 120 && averageColor.g > 100 && 
+                averageColor.g < 180 && averageColor.b > 40 && averageColor.b < 100 &&
+                brightness > 80 && brightness < 150 && colorVariance > 2000 &&
+                (aspectRatio > 0.8 && aspectRatio < 1.3)) {
+                foods.push({ name: 'Avocado', confidence: 0.88, calories: 160, category: 'Fruit', reason: 'Dark green color, oval shape, avocado texture' });
+            }
+
+            // Almond detection - brown/tan color, elongated shape, nut texture
+            if (averageColor.r > 140 && averageColor.r < 190 && averageColor.g > 110 && averageColor.g < 160 && 
+                averageColor.b > 70 && averageColor.b < 120 && brightness > 110 && brightness < 170 &&
+                colorVariance > 1000 && colorVariance < 3000) {
+                foods.push({ name: 'Almonds', confidence: 0.91, calories: 579, category: 'Nuts', reason: 'Brown/tan color, nut-like texture and shape' });
+            }
+
+            // Apple detection - red or green, round shape, smooth surface
+            if (((averageColor.r > 150 && averageColor.g < 100 && averageColor.b < 100) || 
+                (averageColor.r > 100 && averageColor.g > 150 && averageColor.b < 100)) &&
+                brightness > 100 && colorVariance < 2000 &&
+                (aspectRatio > 0.8 && aspectRatio < 1.2)) {
+                foods.push({ name: 'Apple', confidence: 0.89, calories: 52, category: 'Fruit', reason: 'Red or green color, round shape, smooth surface' });
+            }
+
+            // Banana detection - bright yellow, elongated shape
+            if (averageColor.r > 220 && averageColor.g > 200 && averageColor.b < 120 && 
+                brightness > 180 && isTall && colorVariance < 1500) {
+                foods.push({ name: 'Banana', confidence: 0.93, calories: 89, category: 'Fruit', reason: 'Bright yellow color, elongated curved shape' });
+            }
+
+            // Salmon detection - pink/orange color, fish-like appearance
+            if (averageColor.r > 180 && averageColor.g > 100 && averageColor.g < 150 && 
+                averageColor.b > 60 && averageColor.b < 120 && brightness > 140 &&
+                colorVariance > 1500) {
+                foods.push({ name: 'Salmon', confidence: 0.87, calories: 208, category: 'Protein', reason: 'Pink/orange color, fish-like texture' });
+            }
+
+            // Chicken detection - white/beige color, meat-like texture
+            if (averageColor.r > 180 && averageColor.g > 160 && averageColor.b > 140 && 
+                brightness > 160 && colorVariance > 1500 && colorVariance < 4000) {
+                foods.push({ name: 'Chicken Breast', confidence: 0.84, calories: 165, category: 'Protein', reason: 'White/beige color, meat texture' });
+            }
+
+            // Broccoli detection - green color, clustered texture
+            if (averageColor.r > 50 && averageColor.r < 120 && averageColor.g > 90 && 
+                averageColor.g < 170 && averageColor.b > 30 && averageColor.b < 90 &&
+                colorVariance > 2000) {
+                foods.push({ name: 'Broccoli', confidence: 0.90, calories: 34, category: 'Vegetable', reason: 'Green color, clustered florets texture' });
+            }
+
+            // Carrot detection - orange color, elongated shape
+            if (averageColor.r > 200 && averageColor.g > 120 && averageColor.g < 180 && 
+                averageColor.b > 40 && averageColor.b < 100 && isTall &&
+                colorVariance > 1000) {
+                foods.push({ name: 'Carrot', confidence: 0.92, calories: 41, category: 'Vegetable', reason: 'Orange color, elongated cylindrical shape' });
+            }
+
+            // Greek Yogurt detection - very white, smooth texture
+            if (averageColor.r > 230 && averageColor.g > 230 && averageColor.b > 230 && 
+                brightness > 230 && colorVariance < 400) {
+                foods.push({ name: 'Greek Yogurt', confidence: 0.87, calories: 59, category: 'Dairy', reason: 'Very white color, smooth creamy texture' });
+            }
+
+            // Quinoa detection - small grains, varied colors, high variance
+            if (colorVariance > 2500 && brightness > 100 && brightness < 200 &&
+                averageColor.r > 150 && averageColor.g > 140 && averageColor.b > 120) {
+                foods.push({ name: 'Quinoa', confidence: 0.79, calories: 120, category: 'Grain', reason: 'Small grain-like particles, varied colors' });
+            }
+
+            // Bread detection - golden brown color, soft texture
+            if (averageColor.r > 180 && averageColor.r < 220 && averageColor.g > 140 && 
+                averageColor.g < 180 && averageColor.b > 80 && averageColor.b < 120 &&
+                brightness > 140 && brightness < 180 && colorVariance > 1000) {
+                foods.push({ name: 'Bread', confidence: 0.85, calories: 247, category: 'Grain', reason: 'Golden brown color, bread-like texture' });
+            }
+
+            // Rice detection - white/cream color, small grain texture
+            if (averageColor.r > 200 && averageColor.g > 190 && averageColor.b > 170 && 
+                brightness > 190 && colorVariance > 800 && colorVariance < 2000) {
+                foods.push({ name: 'Rice', confidence: 0.82, calories: 130, category: 'Grain', reason: 'White/cream color, small grain texture' });
+            }
+
+            // Yolk-based detection: if visible yolk area is non-trivial, prefer eggs
+            if (yolkScore && yolkScore > 0.01) {
+                pushDecision(`yolkScore=${yolkScore.toFixed(4)} -> visible yolk detected`);
+                // prefer fried/raw depending on variance
+                if (colorVariance > 1000) {
+                    foods.push({ name: 'Fried Eggs', confidence: Math.max(0.7, 0.8 * yolkScore + 0.5), calories: 155, category: 'Protein', reason: 'Visible yolk + textured variance' });
+                } else {
+                    foods.push({ name: 'Eggs with visible yolk', confidence: Math.max(0.65, 0.7 * yolkScore + 0.4), calories: 155, category: 'Protein', reason: 'Visible yolk area' });
+                }
+            }
+
+            // If no specific food detected, return a general analysis but log metrics
+            if (foods.length === 0) {
+                pushDecision(`No match — brightness=${brightness.toFixed(1)}, colorVariance=${Math.round(colorVariance)}, yolkScore=${(yolkScore||0).toFixed(4)}, aspect=${aspectRatio.toFixed(2)}`);
+                return {
+                    name: 'Unrecognized Food',
+                    confidence: 0.60,
+                    calories: 150,
+                    category: 'Unknown',
+                    reason: 'Food characteristics detected but not matched to known foods'
+                };
+            }
+
+            // Return the food with highest confidence and log chosen item
+            const best = foods.reduce((best, current) => current.confidence > best.confidence ? current : best);
+            pushDecision(`Matched -> ${best.name} (conf ${Math.round(best.confidence*100)}%), reason: ${best.reason}`);
+            return best;
+        }
+
+        function addDetectedFood() {
+            const detectedFood = document.getElementById('detectedFood').textContent;
+            const detectedCalories = parseInt(document.getElementById('detectedCalories').textContent);
+            
+            // Get nutrition data
+            const foodData = aiFoodDatabase[detectedFood.toLowerCase()] || {
+                calories: detectedCalories,
+                protein: 10,
+                carbs: 15,
+                fat: 5,
+                category: 'food'
+            };
+
+            const foodItem = {
+                name: detectedFood,
+                quantity: 100,
+                unit: 'g',
+                mealType: 'snack',
+                calories: foodData.calories,
+                protein: foodData.protein,
+                carbs: foodData.carbs,
+                fat: foodData.fat,
+                timestamp: new Date().toLocaleString(),
+                source: 'AI Camera Detection'
+            };
+
+            foodLog.push(foodItem);
+            updateHistory();
+            updateStats();
+            
+            // Clear camera results
+            document.getElementById('cameraResult').classList.add('hidden');
+            document.getElementById('imagePreview').classList.add('hidden');
+            capturedImageData = null;
+            
+            showAIMessage(`✅ "${detectedFood}" added to your food log via AI detection!`);
+        }
+
+        function calculateBMI() {
+            const name = document.getElementById('userName').value;
+            const age = parseInt(document.getElementById('userAge').value);
+            const gender = document.getElementById('userGender').value;
+            const height = parseFloat(document.getElementById('userHeight').value);
+            const weight = parseFloat(document.getElementById('userWeight').value);
+            const activity = document.getElementById('userActivity').value;
+
+            if (!name || !age || !height || !weight) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('bmiBtnText').classList.add('hidden');
+            document.getElementById('bmiLoading').classList.remove('hidden');
+
+            setTimeout(() => {
+                // Calculate BMI
+                const heightInMeters = height / 100;
+                const bmi = weight / (heightInMeters * heightInMeters);
+                
+                // Get BMI category
+                let category;
+                if (bmi < 18.5) category = 'Underweight';
+                else if (bmi < 25) category = 'Normal weight';
+                else if (bmi < 30) category = 'Overweight';
+                else category = 'Obese';
+
+                // Calculate daily calories (Mifflin-St Jeor equation)
+                let bmr;
+                if (gender === 'male') {
+                    bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+                } else {
+                    bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+                }
+
+                const activityMultipliers = {
+                    sedentary: 1.2,
+                    light: 1.375,
+                    moderate: 1.55,
+                    active: 1.725,
+                    very_active: 1.9,
+                };
+
+                const dailyCalories = Math.round(bmr * activityMultipliers[activity]);
+
+                // Save user profile
+                userProfile = { name, age, gender, height, weight, bmi, dailyCalories };
+
+                // Display results
+                document.getElementById('bmiValue').textContent = bmi.toFixed(1);
+                document.getElementById('bmiCategory').textContent = category;
+                document.getElementById('dailyCalories').textContent = dailyCalories + ' kcal';
+                document.getElementById('bmiResult').classList.remove('hidden');
+
+                // Hide loading
+                document.getElementById('bmiBtnText').classList.remove('hidden');
+                document.getElementById('bmiLoading').classList.add('hidden');
+
+                // Show success message
+                showAIMessage('✅ BMI calculated successfully! Your daily calorie goal is ' + dailyCalories + ' kcal.');
+            }, 1500);
+        }
+
+        function estimateNutrients() {
+            const foodName = document.getElementById('foodName').value.toLowerCase().trim();
+            const quantity = parseFloat(document.getElementById('foodQuantity').value);
+            const unit = document.getElementById('foodUnit').value;
+
+            if (!foodName || !quantity) {
+                alert('Please enter food name and quantity');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('nutrientBtnText').classList.add('hidden');
+            document.getElementById('nutrientLoading').classList.remove('hidden');
+
+            setTimeout(() => {
+                // Convert to grams
+                let quantityInGrams = quantity;
+                switch (unit) {
+                    case 'kg':
+                        quantityInGrams = quantity * 1000;
+                        break;
+                    case 'ml':
+                        quantityInGrams = quantity;
+                        break;
+                    case 'cup':
+                        quantityInGrams = quantity * 240;
+                        break;
+                    case 'tbsp':
+                        quantityInGrams = quantity * 15;
+                        break;
+                    case 'tsp':
+                        quantityInGrams = quantity * 5;
+                        break;
+                    case 'piece':
+                        quantityInGrams = quantity * 50;
+                        break;
+                }
+
+                // AI Food Recognition
+                let nutrition = null;
+                let confidence = 0.7;
+                
+                // Direct match
+                if (aiFoodDatabase[foodName]) {
+                    nutrition = aiFoodDatabase[foodName];
+                    confidence = 0.95;
+                } else {
+                    // Fuzzy matching
+                    for (const [key, value] of Object.entries(aiFoodDatabase)) {
+                        if (foodName.includes(key) || key.includes(foodName)) {
+                            nutrition = value;
+                            confidence = 0.85;
+                            break;
+                        }
+                    }
+                }
+
+                if (!nutrition) {
+                    // AI estimation based on category
+                    nutrition = estimateByCategory(foodName);
+                    confidence = 0.7;
+                }
+
+                const multiplier = quantityInGrams / 100;
+                const calories = Math.round(nutrition.calories * multiplier);
+                const protein = Math.round(nutrition.protein * multiplier * 10) / 10;
+                const carbs = Math.round(nutrition.carbs * multiplier * 10) / 10;
+                const fat = Math.round(nutrition.fat * multiplier * 10) / 10;
+
+                // Display results
+                document.getElementById('caloriesValue').textContent = calories + ' kcal';
+                document.getElementById('proteinValue').textContent = protein + 'g';
+                document.getElementById('carbsValue').textContent = carbs + 'g';
+                document.getElementById('fatValue').textContent = fat + 'g';
+                document.getElementById('nutrientResult').classList.remove('hidden');
+
+                // Hide loading
+                document.getElementById('nutrientBtnText').classList.remove('hidden');
+                document.getElementById('nutrientLoading').classList.add('hidden');
+
+                // Show AI message
+                const category = nutrition.category || 'food';
+                showAIMessage(`🤖 AI recognized "${foodName}" as ${category} with ${Math.round(confidence * 100)}% confidence!`);
+            }, 1200);
+        }
+
+        function estimateByCategory(foodName) {
+            let nutrition = { calories: 100, protein: 3, carbs: 15, fat: 1, category: 'unknown' };
+
+            if (foodName.includes('nut') || foodName.includes('seed')) {
+                nutrition = { calories: 550, protein: 20, carbs: 20, fat: 50, category: 'nut' };
+            } else if (foodName.includes('meat') || foodName.includes('chicken') || foodName.includes('beef') || foodName.includes('fish')) {
+                nutrition = { calories: 200, protein: 25, carbs: 0, fat: 10, category: 'protein' };
+            } else if (foodName.includes('fruit') || foodName.includes('apple') || foodName.includes('banana')) {
+                nutrition = { calories: 50, protein: 0.5, carbs: 12, fat: 0.2, category: 'fruit' };
+            } else if (foodName.includes('vegetable') || foodName.includes('broccoli') || foodName.includes('carrot')) {
+                nutrition = { calories: 30, protein: 2, carbs: 6, fat: 0.3, category: 'vegetable' };
+            } else if (foodName.includes('grain') || foodName.includes('rice') || foodName.includes('pasta')) {
+                nutrition = { calories: 120, protein: 3, carbs: 25, fat: 1, category: 'grain' };
+            } else if (foodName.includes('dairy') || foodName.includes('milk') || foodName.includes('yogurt')) {
+                nutrition = { calories: 60, protein: 5, carbs: 4, fat: 3, category: 'dairy' };
+            }
+
+            return nutrition;
+        }
+
+        function addToLog() {
+            const foodName = document.getElementById('foodName').value;
+            const quantity = parseFloat(document.getElementById('foodQuantity').value);
+            const unit = document.getElementById('foodUnit').value;
+            const mealType = document.getElementById('mealType').value;
+            const calories = parseInt(document.getElementById('caloriesValue').textContent);
+            const protein = parseFloat(document.getElementById('proteinValue').textContent);
+            const carbs = parseFloat(document.getElementById('carbsValue').textContent);
+            const fat = parseFloat(document.getElementById('fatValue').textContent);
+
+            const foodItem = {
+                name: foodName,
+                quantity: quantity,
+                unit: unit,
+                mealType: mealType,
+                calories: calories,
+                protein: protein,
+                carbs: carbs,
+                fat: fat,
+                timestamp: new Date().toLocaleString(),
+                source: 'Manual Entry'
+            };
+
+            foodLog.push(foodItem);
+            updateHistory();
+            updateStats();
+            
+            // Clear form
+            document.getElementById('foodName').value = '';
+            document.getElementById('foodQuantity').value = '100';
+            document.getElementById('nutrientResult').classList.add('hidden');
+            
+            showAIMessage('✅ Food added to your log! Great job tracking your nutrition.');
+        }
+
+        function updateHistory() {
+            const historyDiv = document.getElementById('foodHistory');
+            if (foodLog.length === 0) {
+                historyDiv.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📊</div>
+                        <div class="empty-text">No food items logged yet</div>
+                        <div style="color: #94a3b8; font-size: 14px;">Start logging your meals to see your nutrition history!</div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            foodLog.forEach((item, index) => {
+                const mealIcon = {
+                    breakfast: '🌅',
+                    lunch: '☀️',
+                    dinner: '🌙',
+                    snack: '🍎'
+                }[item.mealType] || '🍽️';
+
+                const sourceIcon = item.source === 'AI Camera Detection' ? '📷' : '✍️';
+
+                html += `
+                    <div class="food-item">
+                        <div class="food-name">${mealIcon} ${item.name} ${sourceIcon}</div>
+                        <div class="food-details">
+                            ${item.quantity} ${item.unit} • ${item.mealType}
+                            <br>Protein: ${item.protein}g • Carbs: ${item.carbs}g • Fat: ${item.fat}g
+                            <br><small style="color: #94a3b8;">${item.timestamp} • ${item.source}</small>
+                        </div>
+                        <div class="food-calories">${item.calories} kcal</div>
+                    </div>
+                `;
+            });
+            historyDiv.innerHTML = html;
+        }
+
+        function updateStats() {
+            const totalCalories = foodLog.reduce((sum, item) => sum + item.calories, 0);
+            document.getElementById('todayCalories').textContent = totalCalories;
+            document.getElementById('todayLogs').textContent = foodLog.length;
+
+            // Update progress bar
+            if (userProfile && userProfile.dailyCalories) {
+                const progress = Math.min((totalCalories / userProfile.dailyCalories) * 100, 100);
+                document.getElementById('calorieProgress').style.width = progress + '%';
+                
+                const remaining = userProfile.dailyCalories - totalCalories;
+                if (remaining > 0) {
+                    document.getElementById('calorieStatus').textContent = `${remaining} calories remaining`;
+                } else {
+                    document.getElementById('calorieStatus').textContent = 'Goal reached! 🎉';
+                }
+            }
+        }
+
+        function showAIMessage(message) {
+            // Create temporary AI message
+            const aiMessage = document.createElement('div');
+            aiMessage.className = 'ai-suggestion';
+            aiMessage.style.position = 'fixed';
+            aiMessage.style.top = '20px';
+            aiMessage.style.left = '20px';
+            aiMessage.style.right = '20px';
+            aiMessage.style.zIndex = '1000';
+            aiMessage.innerHTML = `<div class="ai-text">${message}</div>`;
+            
+            document.body.appendChild(aiMessage);
+            
+            setTimeout(() => {
+                aiMessage.remove();
+            }, 3000);
+        }
+
+        // Random tips array
+        const randomTips = [
+            "💡 CalPac Tip: Try scanning nuts like almonds or walnuts for instant calorie detection!",
+            "🍎 CalPac Tip: Avocados are high in healthy fats - great for keto diets!",
+            "🥗 CalPac Tip: Leafy greens like spinach are low in calories but high in nutrients!",
+            "🐟 CalPac Tip: Salmon is rich in omega-3 fatty acids and protein!",
+            "🥜 CalPac Tip: Nuts are calorie-dense but provide healthy fats and protein!",
+            "🍌 CalPac Tip: Bananas are great for pre-workout energy due to their carbs!",
+            "🥚 CalPac Tip: Eggs are a complete protein source with all essential amino acids!",
+            "🍳 CalPac Tip: Boiled eggs are detected with 96% accuracy - try scanning them!",
+            "🥑 CalPac Tip: Avocados are detected by their dark green color and oval shape!",
+            "🔍 CalPac Tip: Our AI analyzes color, texture, and shape for accurate food detection!",
+            "🌾 CalPac Tip: Quinoa is a complete protein grain perfect for vegetarians!",
+            "🥛 CalPac Tip: Greek yogurt has more protein than regular yogurt!",
+            "🥕 CalPac Tip: Carrots are rich in beta-carotene which converts to vitamin A!",
+            "🍓 CalPac Tip: Berries are low in calories but high in antioxidants!",
+            "🥑 CalPac Tip: Avocados contain more potassium than bananas!",
+            "🐔 CalPac Tip: Chicken breast is one of the leanest protein sources!",
+            "🌰 CalPac Tip: Walnuts are the only nuts with significant omega-3 content!",
+            "🍅 CalPac Tip: Tomatoes are technically a fruit but nutritionally a vegetable!",
+            "🥦 CalPac Tip: Broccoli contains more vitamin C than oranges!",
+            "🍠 CalPac Tip: Sweet potatoes are rich in beta-carotene and fiber!",
+            "🥜 CalPac Tip: Almonds are the most nutrient-dense tree nut!",
+            "🐟 CalPac Tip: Fish like salmon and tuna are excellent sources of vitamin D!",
+            "🥛 CalPac Tip: Dairy products are the best dietary source of calcium!"
+        ];
+
+        function showRandomTip() {
+            const randomIndex = Math.floor(Math.random() * randomTips.length);
+            const tipElement = document.getElementById('randomTip');
+            if (tipElement) {
+                tipElement.textContent = randomTips[randomIndex];
+            }
+        }
+
+        // Initialize
+        updateHistory();
+        updateStats();
+        showRandomTip();
+        
+        // Change tip every 10 seconds
+        setInterval(showRandomTip, 10000);
+    </script>
+</body>
+</html>
